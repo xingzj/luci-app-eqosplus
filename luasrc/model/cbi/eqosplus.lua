@@ -1,8 +1,8 @@
--- Copyright 2022-2023 sirpdboy <herboy2008@gmail.com>
+-- Copyright 2022-2025 lava <byl0561@gmail.com>
 -- Licensed to the public under the Apache License 2.0.
 local sys = require "luci.sys"
-local ifaces = sys.net:devices()
-local WADM = require "luci.tools.webadmin"
+local nw = require "luci.model.network".init()
+local interfaces = nw:get_interfaces()
 local ipc = require "luci.ip"
 local a, t, e
 
@@ -18,15 +18,23 @@ e.template = "eqosplus/eqosplus"
 e.value = translate("Collecting data...")
 
 
-ipi = t:option(ListValue, "ifname", translate("Interface"), translate("Set the interface used for restriction, use pppoe-wan for dialing, use WAN hardware interface for DHCP mode (such as eth1), and use br-lan for bypass mode"))
+ipi = t:option(ListValue, "ifname", translate("Interface"), translate("Set the interface used for restriction"))
 ipi.default = "1"
 ipi:value(1,translate("Automatic settings"))
 ipi.rmempty = false
-for _, v in pairs(ifaces) do
-	net = WADM.iface_get_network(v)
-	if net and net ~= "loopback" then
-		ipi:value(v)
-	end
+
+local lan_interfaces = {}
+
+for _, iface in ipairs(interfaces) do
+    local name = iface:name()
+    local net = iface:get_network()
+
+    if net and net:name() ~= "loopback" then
+        ipi:value(name)
+        if string.match(net:name(), "lan") then                                                                                                                                                                                                                                                       
+            table.insert(lan_interfaces, name)                                                                                                                                                                                                                                                  
+        end 
+    end
 end
 
 t = a:section(TypedSection, "device")
@@ -42,17 +50,18 @@ e.rmempty = false
 e.size = 4
 
 ip = t:option(Value, "mac", translate("IP/MAC"))
-
-ipc.neighbors({family = 4, dev = "br-lan"}, function(n)
-	if n.mac and n.dest then
-		ip:value(n.dest:string(), "%s (%s)" %{ n.dest:string(), n.mac })
-	end
-end)
-ipc.neighbors({family = 4, dev = "br-lan"}, function(n)
-	if n.mac and n.dest then
-		ip:value(n.mac, "%s (%s)" %{n.mac, n.dest:string() })
-	end
-end)
+for _, lan_interface in ipairs(lan_interfaces) do
+    ipc.neighbors({family = 4, dev = lan_interface}, function(n)
+        if n.mac and n.dest then
+            ip:value(n.dest:string(), "%s (%s)" %{ n.dest:string(), n.mac })
+        end
+    end)
+    ipc.neighbors({family = 4, dev = lan_interface}, function(n)
+        if n.mac and n.dest then
+            ip:value(n.mac, "%s (%s)" %{n.mac, n.dest:string() })
+        end
+    end)
+end
 
 e.size = 8
 dl = t:option(Value, "download", translate("Downloads"))
