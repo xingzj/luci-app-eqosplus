@@ -13,12 +13,6 @@ jobs:
       fail-fast: false
       matrix:
         arch:
-          - aarch64_generic
-          - i386_pentium-mmx
-          - loongarch64_generic
-          - mips_mips32
-          - mipsel_24kc
-          - mipsel_mips32
           - x86_64
     steps:
       - uses: actions/checkout@main
@@ -27,7 +21,7 @@ jobs:
       - name: Building packages
         uses: sbwml/openwrt-gh-action-sdk@go1.24
         env:
-          ARCH: ${{ matrix.arch }}-openwrt-24.10
+          ARCH: ${{ matrix.arch }}-openwrt-21.02
           FEEDNAME: packages_ci
           PACKAGES: luci-app-eqosplus
           NO_REFRESH_CHECK: true
