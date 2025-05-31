@@ -18,12 +18,13 @@ jobs:
       - name: Building packages
         uses: openwrt/gh-action-sdk@main
         env:
-          ARCH: ${{ matrix.arch }}-openwrt-21.02
+          ARCH: ${{ matrix.arch }}-openwrt-24.10
+          FEEDNAME: packages_ci
           PACKAGES: luci-app-eqosplus
           NO_REFRESH_CHECK: true
 
       - name: Store packages
-        uses: actions/upload-artifact@main
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.arch}}-packages
-          path: bin/packages/${{ matrix.arch }}/packages/*.ipk
+          path: bin/packages/${{ matrix.arch }}/packages_ci/*.ipk

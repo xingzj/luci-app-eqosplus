@@ -7,19 +7,15 @@
 
 include $(TOPDIR)/rules.mk
 
-THEME_NAME:=eqosplus
 PKG_NAME:=luci-app-$(THEME_NAME)
-
-PKG_LICENSE:=Apache-2.0
+PKG_VERSION:=2.0.0
+PKG_RELEASE:=2
 
 LUCI_TITLE:=LuCI support for eqosplus.
-LUCI_DESCRIPTION:=LuCI support for Easy eqosplus(Support speed limit based on IP address).
 LUCI_DEPENDS:=+bash +tc +kmod-sched-core +kmod-ifb +kmod-sched +iptables-mod-filter +iptables-mod-nat-extra
 LUCI_PKGARCH:=all
 
-PKG_VERSION:=1.2.5
-PKG_RELEASE:=20231205
-PKG_MAINTAINER:=sirpdboy <herboy2008@gmail.com>
+PKG_MAINTAINER:=lava <byl0561@gmail.com>
 
 define Build/Compile
 endef
