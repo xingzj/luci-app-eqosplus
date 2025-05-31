@@ -23,7 +23,7 @@ jobs:
           NO_REFRESH_CHECK: true
 
       - name: Store packages
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@main
         with:
           name: ${{ matrix.arch}}-packages
           path: bin/packages/${{ matrix.arch }}/packages/*.ipk
