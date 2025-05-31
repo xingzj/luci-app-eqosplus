@@ -47,9 +47,6 @@ msgstr "星期(1~7)"
 msgid "Suggested feedback:"
 msgstr "建议反馈:"
 
-msgid "Set the interface used for restriction"
-msgstr "设定用来限制网络速度的接口"
-
 msgid "Rest Day"
 msgstr "休息日"
 
