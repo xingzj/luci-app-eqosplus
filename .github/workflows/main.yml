@@ -18,7 +18,7 @@ jobs:
       - name: Building packages
         uses: openwrt/gh-action-sdk@main
         env:
-          ARCH: ${{ matrix.arch }}-openwrt-24.10
+          ARCH: ${{ matrix.arch }}-openwrt-21.02
           FEEDNAME: packages_ci
           PACKAGES: luci-app-eqosplus
           NO_REFRESH_CHECK: true
