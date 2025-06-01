@@ -7,7 +7,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=luci-app-$(THEME_NAME)
+PKG_NAME:=luci-app-eqosplus
 PKG_VERSION:=2.0.0
 PKG_RELEASE:=2
 
