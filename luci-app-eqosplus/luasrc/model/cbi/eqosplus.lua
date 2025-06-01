@@ -38,7 +38,8 @@ for _, iface in ipairs(interfaces) do
     local net = iface:get_network()
 
     if net and string.match(net:name(), "lan") then
-		t = a:section(TypedSection, "network_"..net:name(), net:upper().." "..translate("Configuration"))
+		local net_name = net:name()
+		t = a:section(TypedSection, "network_"..net_name, net_name:upper().." "..translate("Configuration"))
 		t.template = "cbi/tblsection"
 		t.anonymous = true
 		t.addremove = true

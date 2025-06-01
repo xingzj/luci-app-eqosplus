@@ -8,7 +8,7 @@ crid=$2
 NAME=eqosplus
 IDLIST="/var/$NAME.idlist"
 TMPID="/var/$NAME.tmpid"
-running_networks=()
+NETWORKS="/var/$NAME.networks"
 bin_iptables=$(which iptables)   
 bin_ip6tables=$(which ip6tables)
 bin_tc=$(which tc)
@@ -75,7 +75,7 @@ start_network() {
 	$tc qdisc add dev ${dev} ingress
 	$tc filter add dev ${dev} parent ffff: protocol all prio 2 u32 match u32 0 0 flowid 1:1 action mirred egress redirect dev ${dev}_ifb
 
-	running_networks+=("$network")
+	echo "${network}" >> $NETWORKS ;  cat $NETWORKS | sort | uniq  > $TMPID ;cat $TMPID >$NETWORKS ;rm -rf $TMPID
 }
 
 stop_network() {
@@ -93,13 +93,7 @@ stop_network() {
 
 	$ip link del dev ${dev}_ifb 2>/dev/null
 
-	new_networks=()
-	for item in "${running_networks[@]}"; do
-		if [[ "$item" != "$network" ]]; then
-			new_networks+=("$item")
-		fi
-	done
-	running_networks=("${new_networks[@]}")
+	sed -i "/$network/d" $NETWORKS >/dev/null 2>&1
 }
 
 sync_networks() {
@@ -119,9 +113,10 @@ sync_networks() {
 
 	need_start=()
 	need_stop=()
+	running_networks=`cat $NETWORKS `
 	for item in "${all_networks[@]}"; do
 		item_exists=false
-		for net in "${running_networks[@]}"; do
+		for net in $running_networks; do
 			if [[ "$net" == "$item" ]]; then
 				item_exists=true
 				break
@@ -131,7 +126,7 @@ sync_networks() {
 			need_start+=("$item")
 		fi
 	done
-	for item in "${running_networks[@]}"; do
+	for item in $running_networks; do
 		item_exists=false
 		for net in "${all_networks[@]}"; do
 			if [[ "$net" == "$item" ]]; then
@@ -154,7 +149,8 @@ sync_networks() {
 }
 
 stop_qos() {
-	for item in "${running_networks[@]}"; do
+	running_networks=`cat $NETWORKS `
+	for item in $running_networks; do
 		stop_network $item
 	done
 }
@@ -185,6 +181,8 @@ del_id() {
 	$tc filter del dev ${dev} pref 6 2>/dev/null
 	$tc filter del dev ${dev}_ifb pref 5 2>/dev/null
 	$tc filter del dev ${dev} pref 5 2>/dev/null
+
+	sed -i "/$1/d" $IDLIST >/dev/null 2>&1
 }
 
 add_mac() {
@@ -214,6 +212,8 @@ add_mac() {
 	elif [ "$DL" -eq 0 ]; then
 		$tc filter add dev ${dev} parent 1: protocol ip prio 5 u32 match u16 0x0800 0xFFFF at -2 match u32 0x"${M1}${M2}" 0xFFFFFFFF at -12 match u16 0x"${M0}" 0xFFFF at -14 flowid 1:1
 	fi
+
+	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
 }
 
 add_ip() {
@@ -242,6 +242,8 @@ add_ip() {
 	elif [ "$DL" -eq 0 ]; then
 		$tc filter add dev ${dev} parent 1:0 prio 6 protocol ip u32 match ip dst "$ip"/"$Z" classid 1:1
 	fi
+
+	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
 }
 
 check_item() {
@@ -267,9 +269,12 @@ case "$crrun" in
 	"stop")
 		stop_qos
 		> $IDLIST
+		> $NETWORKS
 	;;
 	"start")
-		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' > $IDLIST ; cat $IDLIST `
+		touch $IDLIST
+		touch $NETWORKS
+		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' `
 		init_qosplus
 		for id in $idlist ;do
 			if check_item $id; then
@@ -282,7 +287,6 @@ case "$crrun" in
 			else
 				[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] && {
 					del_id $id
-					sed -i "/$id/d" $IDLIST >/dev/null 2>&1
 				}
 			fi
 		done
@@ -296,18 +300,17 @@ case "$crrun" in
 			else
 				add_ip $id
 			fi
-			echo "${id}" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
 		done
 	;;
 	"del")
 		for id in `echo $crid | sed 's/,/ /g' ` ;do 
 			del_id $id
-			sed -i "/$id/d" $IDLIST >/dev/null 2>&1
 		done
 		sync_networks
 	;;
 	"status")
-		for dev in "${running_networks[@]}"; do
+		running_networks=`cat $NETWORKS `
+		for dev in $running_networks; do
 			echo "### Statistics $dev ###"
 			echo "# qdiscs #"
 			tc -s qdisc show dev $dev
