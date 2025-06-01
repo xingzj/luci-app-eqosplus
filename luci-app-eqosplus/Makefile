@@ -22,7 +22,7 @@ endef
 
 define Package/$(PKG_NAME)/postinst
 #!/bin/sh
-rm -f /tmp/luci-*
+rm -rf /tmp/luci-*
 endef
 
 define Package/$(PKG_NAME)/conffiles
