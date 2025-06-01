@@ -180,11 +180,6 @@ del_id() {
 	
 	$tc filter del dev ${dev}_ifb pref $id 2>/dev/null
 	$tc filter del dev ${dev} pref $id 2>/dev/null
-	
-	$tc filter del dev ${dev}_ifb pref 6 2>/dev/null
-	$tc filter del dev ${dev} pref 6 2>/dev/null
-	$tc filter del dev ${dev}_ifb pref 5 2>/dev/null
-	$tc filter del dev ${dev} pref 5 2>/dev/null
 
 	sed -i "/$1/d" $IDLIST >/dev/null 2>&1
 }
@@ -207,14 +202,14 @@ add_mac() {
 		$tc qdisc add dev ${dev}_ifb parent 1:"$id" handle "$id": sfq perturb 1
 		$tc filter add dev ${dev}_ifb parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:$id
 	elif [ "$UL" -eq 0 ]; then
-		$tc filter add dev ${dev}_ifb parent 1: protocol ip prio 5 u32 match u16 0x0800 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:1
+		$tc filter add dev ${dev}_ifb parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:1
 	fi
 	if [ "$DL" -gt 0 ]; then
 		$tc class add dev ${dev} parent 1:1 classid 1:$id htb rate "$DL"kbit ceil "$DL"kbit prio $id quantum 1500
 		$tc qdisc add dev ${dev} parent 1:"$id" handle "$id": sfq perturb 1
 		$tc filter add dev ${dev} parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u32 0x${M1}${M2} 0xFFFFFFFF at -12 match u16 0x${M0} 0xFFFF at -14 flowid 1:$id
 	elif [ "$DL" -eq 0 ]; then
-		$tc filter add dev ${dev} parent 1: protocol ip prio 5 u32 match u16 0x0800 0xFFFF at -2 match u32 0x"${M1}${M2}" 0xFFFFFFFF at -12 match u16 0x"${M0}" 0xFFFF at -14 flowid 1:1
+		$tc filter add dev ${dev} parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u32 0x"${M1}${M2}" 0xFFFFFFFF at -12 match u16 0x"${M0}" 0xFFFF at -14 flowid 1:1
 	fi
 
 	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
@@ -237,14 +232,14 @@ add_ip() {
 		$tc qdisc add dev ${dev}_ifb parent 1:"$id" handle "$id": sfq perturb 1
 		$tc filter add dev ${dev}_ifb parent 1:0 prio $id protocol ip u32 match ip src "$ip"/"$Z" classid 1:$id
 	elif [ "$UL" -eq 0 ]; then
-		$tc filter add dev ${dev}_ifb parent 1:0 prio 6 protocol ip u32 match ip src "$ip"/"$Z" classid 1:1
+		$tc filter add dev ${dev}_ifb parent 1:0 prio $id protocol ip u32 match ip src "$ip"/"$Z" classid 1:1
 	fi
 	if [ "$DL" -gt 0 ]; then
 		$tc class add dev ${dev} parent 1:1 classid 1:$id htb rate "$DL"kbit ceil "$DL"kbit prio $id quantum 1500
 		$tc qdisc add dev ${dev} parent 1:"$id" handle "$id": sfq perturb 1
 		$tc filter add dev ${dev} parent 1:0 prio $id protocol ip u32 match ip dst "$ip"/"$Z" classid 1:$id
 	elif [ "$DL" -eq 0 ]; then
-		$tc filter add dev ${dev} parent 1:0 prio 6 protocol ip u32 match ip dst "$ip"/"$Z" classid 1:1
+		$tc filter add dev ${dev} parent 1:0 prio $id protocol ip u32 match ip dst "$ip"/"$Z" classid 1:1
 	fi
 
 	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
