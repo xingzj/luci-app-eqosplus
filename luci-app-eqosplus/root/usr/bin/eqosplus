@@ -181,7 +181,8 @@ del_id() {
 	$tc filter del dev ${dev}_ifb pref $id 2>/dev/null
 	$tc filter del dev ${dev} pref $id 2>/dev/null
 
-	sed -i "/$1/d" $IDLIST >/dev/null 2>&1
+	escaped_id=$(echo "$1" | sed 's/\[/\\[/g; s/\]/\\]/g')
+	sed -i "/$escaped_id/d" $IDLIST >/dev/null 2>&1
 }
 
 add_mac() {
@@ -291,7 +292,7 @@ case "$crrun" in
 				    add_ip $id
 				fi
 			else
-				[ `cat $IDLIST  2>/dev/null | grep "${escaped_id}" | wc -l ` -gt 0 ] && {
+				[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] && {
 					del_id $id
 				}
 			fi
