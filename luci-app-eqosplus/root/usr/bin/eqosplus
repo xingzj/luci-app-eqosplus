@@ -16,6 +16,10 @@ bin_ip=$(which ip)
 # Uncomment this to debug commands
 DEBUG=0
 ## End
+
+touch $IDLIST
+touch $NETWORKS
+
 # Debug functions - echo + run
 dbg_iptables() {
 	[ "${DEBUG:-0}" -eq 0 ] || echo "DEBUG: iptables $*"
@@ -272,8 +276,6 @@ case "$crrun" in
 		> $NETWORKS
 	;;
 	"start")
-		touch $IDLIST
-		touch $NETWORKS
 		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' `
 		init_qosplus
 		for id in $idlist ;do
@@ -310,7 +312,8 @@ case "$crrun" in
 	;;
 	"status")
 		running_networks=`cat $NETWORKS `
-		for dev in $running_networks; do
+		for network in $running_networks; do
+			dev=$(uci get network.$network.device)
 			echo "### Statistics $dev ###"
 			echo "# qdiscs #"
 			tc -s qdisc show dev $dev
