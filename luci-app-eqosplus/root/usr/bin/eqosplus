@@ -282,6 +282,7 @@ case "$crrun" in
 		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' `
 		init_qosplus
 		for id in $idlist ;do
+			escaped_id=$(echo "$id" | sed 's/\[/\\[/g; s/\]/\\]/g')
 			if check_item $id; then
 				device=$(uci -q get $NAME.@network_$id.mac )
 				if is_macaddr $device; then
@@ -290,7 +291,7 @@ case "$crrun" in
 				    add_ip $id
 				fi
 			else
-				[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] && {
+				[ `cat $IDLIST  2>/dev/null | grep "${escaped_id}" | wc -l ` -gt 0 ] && {
 					del_id $id
 				}
 			fi

@@ -36,13 +36,14 @@ check_item() {
 
 idlistusr(){
 	[ -s $IDLIST ] || touch $IDLIST
-	for id in $idlist ;do	
+	for id in $idlist ;do
+		escaped_id=$(echo "$id" | sed 's/\[/\\[/g; s/\]/\\]/g')
 		if check_item $id; then
-			[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] || { 
+			[ `cat $IDLIST  2>/dev/null | grep "${escaped_id}" | wc -l ` -gt 0 ] || { 
 				eqosplus add $id
 			}
 		else
-			[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] && {
+			[ `cat $IDLIST  2>/dev/null | grep "${escaped_id}" | wc -l ` -gt 0 ] && {
 				eqosplus del $id
 			}
 		fi
