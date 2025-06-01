@@ -11,16 +11,24 @@ check_item() {
     id=$1
 	start_time=$(uci -q get $NAME.@network_$id.timestart 2>/dev/null)
 	end_time=$(uci -q get $NAME.@network_$id.timeend 2>/dev/null)
-	wweek=`uci -q get $NAME.@network_$id.week `
-	current_time=$(date +%H:%M)
+	wweek=$(uci -q get $NAME.@network_$id.week)
+	current_time=$(date +%s)
 	current_weekday=$(date +%u)
-	[ "$start_time" = "$end_time" ] || { 
-	[[ "$start_time" < "$end_time" ]] && { [[ "$current_time" > "$start_time" ]] && [[ "$current_time" < "$end_time" ]] || return 0; }
-	[[ "$start_time" > "$end_time" ]] && { [[ "$current_time" < "$start_time" ]] && [[ "$current_time" > "$end_time" ]] || return 0; }
-	}
-	for ww in `echo $wweek | sed 's/,/ /g' `; do 
-		if [ $current_weekday = $ww ] || [ "x0" = "x$ww" ] ; then 
-		      return 1
+
+	start_seconds=$(date -d "$start_time" +%s)
+	end_seconds=$(date -d "$end_time" +%s)
+
+	if [ "$start_seconds" -ge "$end_seconds" ]; then
+		return 0
+	fi
+
+	if [ "$current_time" -lt "$start_seconds" ] || [ "$current_time" -gt "$end_seconds" ]; then
+		return 0
+	fi
+
+	for ww in $(echo $wweek | sed 's/,/ /g'); do
+		if [ "$current_weekday" -eq "$ww" ] || [ "x0" = "x$ww" ]; then
+			return 1
 		fi
 	done
 	return 0
