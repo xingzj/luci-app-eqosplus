@@ -266,8 +266,7 @@ check_item() {
 case "$crrun" in
 	"stop")
 		stop_qos
-		rm $IDLIST
-		touch $IDLIST
+		> $IDLIST
 	;;
 	"start")
 		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' > $IDLIST ; cat $IDLIST `
