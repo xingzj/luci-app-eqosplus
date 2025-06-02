@@ -169,7 +169,7 @@ del_id() {
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
 	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 2 | awk -v n="$id" '{printf "%d", ($1 + 11) "00" + n}' `
+	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
 
 	[ "${DEBUG:-0}" -eq 0 ] || echo "D: del_id $@" "--$id --$device"
 	$tc qd del dev ${dev} parent 1:$id  2>/dev/null
@@ -192,7 +192,7 @@ add_mac() {
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
 	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 2 | awk -v n="$id" '{printf "%d", ($1 + 11) "00" + n}' `
+	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
 	M0=$(echo $mac | cut -d : -f 1)$(echo $mac | cut -d : -f 2)
 	M1=$(echo $mac | cut -d : -f 3)$(echo $mac | cut -d : -f 4)
 	M2=$(echo $mac | cut -d : -f 5)$(echo $mac | cut -d : -f 6)
@@ -223,7 +223,7 @@ add_ip() {
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
 	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 2 | awk -v n="$id" '{printf "%d", ($1 + 11) "00" + n}' `
+	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
 
 	[ "${DEBUG:-0}" -eq 0 ] || echo "D: add_ip $@ --$id --$ip"
 	Z=`echo $ip |awk -F '[/]' '{print $2}' `
@@ -246,33 +246,6 @@ add_ip() {
 	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
 }
 
-check_item() {
-    id=$1
-	start_time=$(uci -q get $NAME.@network_$id.timestart 2>/dev/null)
-	end_time=$(uci -q get $NAME.@network_$id.timeend 2>/dev/null)
-	wweek=$(uci -q get $NAME.@network_$id.week)
-	current_time=$(date +%s)
-	current_weekday=$(date +%u)
-
-	start_seconds=$(date -d "$start_time" +%s)
-	end_seconds=$(date -d "$end_time" +%s)
-
-	if [ "$start_seconds" -ge "$end_seconds" ]; then
-		return 1
-	fi
-
-	if [ "$current_time" -lt "$start_seconds" ] || [ "$current_time" -gt "$end_seconds" ]; then
-		return 1
-	fi
-
-	for ww in $(echo $wweek | sed 's/,/ /g'); do
-		if [ "$current_weekday" -eq "$ww" ] || [ "x0" = "x$ww" ]; then
-			return 0
-		fi
-	done
-	return 1
-}
-
 case "$crrun" in
 	"stop")
 		stop_qos
@@ -280,23 +253,9 @@ case "$crrun" in
 		> $NETWORKS
 	;;
 	"start")
-		idlist=`uci show $NAME | grep "enable='1'" | grep "network_" | grep -oE '@network_[^.]+' | sed 's/@network_//' `
+		> $IDLIST
+		> $NETWORKS
 		init_qosplus
-		for id in $idlist ;do
-			escaped_id=$(echo "$id" | sed 's/\[/\\[/g; s/\]/\\]/g')
-			if check_item $id; then
-				device=$(uci -q get $NAME.@network_$id.mac )
-				if is_macaddr $device; then
-				    add_mac $id
-				else
-				    add_ip $id
-				fi
-			else
-				[ `cat $IDLIST  2>/dev/null | grep "${id}" | wc -l ` -gt 0 ] && {
-					del_id $id
-				}
-			fi
-		done
 	;;
 	"add")
 		sync_networks
