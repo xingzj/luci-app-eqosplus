@@ -258,7 +258,6 @@ case "$crrun" in
 		init_qosplus
 	;;
 	"add")
-		sync_networks
 		for id in `echo $crid | sed 's/,/ /g' ` ;do
 			device=$(uci -q get $NAME.@network_$id.mac )
 			if is_macaddr $device; then
@@ -272,7 +271,6 @@ case "$crrun" in
 		for id in `echo $crid | sed 's/,/ /g' ` ;do 
 			del_id $id
 		done
-		sync_networks
 	;;
 	"status")
 		running_networks=`cat $NETWORKS `
