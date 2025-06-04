@@ -22,7 +22,7 @@ check_item() {
 		return 1
 	fi
 
-	if [ "$current_time" -le "$start_seconds" ] || [ "$current_time" -ge "$end_seconds" ]; then
+	if [ "$current_time" -lt "$start_seconds" ] || [ "$current_time" -gt "$end_seconds" ]; then
 		return 1
 	fi
 
