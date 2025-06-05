@@ -164,12 +164,27 @@ init_qosplus() {
 	sync_networks
 }
 
+cal_uuid() {
+	network=`echo $1 | sed 's/\[.*\]//' `
+	rule_id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
+
+	network_id=0
+	running_networks=`cat $NETWORKS `
+	for running_network in $running_networks; do
+		if [ "$network" == "$running_network" ]; then
+			break
+		fi
+		network_id=$((network_id + 1))
+	done
+
+	echo `echo -n "$network_id" | awk -v n="$rule_id" '{printf "%d", ($1 + 11) "00" + n * 2}' `
+}
+
 del_id() {
 	device=$(uci -q get $NAME.@network_$1.mac )
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
-	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
+	id=$(cal_uuid $1)
 
 	[ "${DEBUG:-0}" -eq 0 ] || echo "D: del_id $@" "--$id --$device"
 	$tc qd del dev ${dev} parent 1:$id  2>/dev/null
@@ -179,7 +194,9 @@ del_id() {
 	$tc class del dev ${dev}_ifb parent 1:1 classid 1:$id 2>/dev/null
 	
 	$tc filter del dev ${dev}_ifb pref $id 2>/dev/null
+	$tc filter del dev ${dev}_ifb pref $(($id + 1)) 2>/dev/null
 	$tc filter del dev ${dev} pref $id 2>/dev/null
+	$tc filter del dev ${dev} pref $(($id + 1)) 2>/dev/null
 
 	escaped_id=$(echo "$1" | sed 's/\[/\\[/g; s/\]/\\]/g')
 	sed -i "/$escaped_id/d" $IDLIST >/dev/null 2>&1
@@ -191,8 +208,7 @@ add_mac() {
 	UL=$(uci -q get $NAME.@network_$1.upload   2>/dev/null | awk '{printf "%d", $1*8*1000}')
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
-	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
+	id=$(cal_uuid $1)
 	M0=$(echo $mac | cut -d : -f 1)$(echo $mac | cut -d : -f 2)
 	M1=$(echo $mac | cut -d : -f 3)$(echo $mac | cut -d : -f 4)
 	M2=$(echo $mac | cut -d : -f 5)$(echo $mac | cut -d : -f 6)
@@ -201,16 +217,22 @@ add_mac() {
 	if [ "$UL" -gt 0 ]; then
 		$tc class add dev ${dev}_ifb parent 1:1 classid 1:$id htb rate "$UL"kbit ceil "$UL"kbit prio $id quantum 1500
 		$tc qdisc add dev ${dev}_ifb parent 1:"$id" handle "$id": sfq perturb 1
+		# IPv4 and IPv6 filters
 		$tc filter add dev ${dev}_ifb parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:$id
+		$tc filter add dev ${dev}_ifb parent 1: protocol ipv6 prio $(($id + 1)) u32 match u16 0x86DD 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:$id
 	elif [ "$UL" -eq 0 ]; then
 		$tc filter add dev ${dev}_ifb parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:1
+		$tc filter add dev ${dev}_ifb parent 1: protocol ipv6 prio $(($id + 1)) u32 match u16 0x86DD 0xFFFF at -2 match u16 0x"${M2}" 0xFFFF at -4 match u32 0x"${M0}${M1}" 0xFFFFFFFF at -8 flowid 1:1
 	fi
 	if [ "$DL" -gt 0 ]; then
 		$tc class add dev ${dev} parent 1:1 classid 1:$id htb rate "$DL"kbit ceil "$DL"kbit prio $id quantum 1500
 		$tc qdisc add dev ${dev} parent 1:"$id" handle "$id": sfq perturb 1
+		# IPv4 and IPv6 filters
 		$tc filter add dev ${dev} parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u32 0x${M1}${M2} 0xFFFFFFFF at -12 match u16 0x${M0} 0xFFFF at -14 flowid 1:$id
+		$tc filter add dev ${dev} parent 1: protocol ipv6 prio $(($id + 1)) u32 match u16 0x86DD 0xFFFF at -2 match u32 0x${M1}${M2} 0xFFFFFFFF at -12 match u16 0x${M0} 0xFFFF at -14 flowid 1:$id
 	elif [ "$DL" -eq 0 ]; then
 		$tc filter add dev ${dev} parent 1: protocol ip prio $id u32 match u16 0x0800 0xFFFF at -2 match u32 0x"${M1}${M2}" 0xFFFFFFFF at -12 match u16 0x"${M0}" 0xFFFF at -14 flowid 1:1
+		$tc filter add dev ${dev} parent 1: protocol ipv6 prio $(($id + 1)) u32 match u16 0x86DD 0xFFFF at -2 match u32 0x"${M1}${M2}" 0xFFFFFFFF at -12 match u16 0x"${M0}" 0xFFFF at -14 flowid 1:1
 	fi
 
 	echo "$1" >> $IDLIST ;  cat $IDLIST | sort | uniq  > $TMPID ;cat $TMPID >$IDLIST ;rm -rf $TMPID
@@ -222,8 +244,7 @@ add_ip() {
 	UL=$(uci -q get $NAME.@network_$1.upload   2>/dev/null | awk '{printf "%d", $1*8*1000}')
 	network=`echo $1 | sed 's/\[.*\]//' `
 	dev=$(uci get network.$network.device)
-	id=`echo $1 | sed -n 's/.*\[\([0-9]*\)\]/\1/p' `
-	id=`echo -n "$dev" | md5sum | tr -dc '0-9' | tail -c 3 | awk -v n="$id" '{printf "%d", ($1 + 111) "0" + n}' `
+	id=$(cal_uuid $1)
 
 	[ "${DEBUG:-0}" -eq 0 ] || echo "D: add_ip $@ --$id --$ip"
 	Z=`echo $ip |awk -F '[/]' '{print $2}' `

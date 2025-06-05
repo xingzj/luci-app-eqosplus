@@ -53,5 +53,5 @@ idlistusr(){
 
 while :;do
 	idlistusr
-	sleep 60
+	sleep 30
 done
