@@ -1,11 +1,13 @@
 module("luci.controller.eqosplus", package.seeall)
--- Copyright 2022-2025 lava <byl0561@gmail.com>
+-- Copyright 2022-2023 sirpdboy <herboy2008@gmail.com>
 function index()
     if not nixio.fs.access("/etc/config/eqosplus") then return end
-    local e = entry({"admin", "services", "eqosplus"}, cbi("eqosplus"), _("Eqosplus"), 10)
+    entry({"admin", "control"}, firstchild(), "Control", 44).dependent = false
+
+    local e = entry({"admin", "control", "eqosplus"}, cbi("eqosplus"), _("Eqosplus"), 10)
     e.dependent=false
     e.acl_depends = { "luci-app-eqosplus" }
-    entry({"admin", "services", "eqosplus", "status"}, call("act_status")).leaf = true
+    entry({"admin", "control", "eqosplus", "status"}, call("act_status")).leaf = true
 end
 
 function act_status()
