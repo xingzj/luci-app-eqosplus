@@ -15,7 +15,7 @@ LUCI_TITLE:=LuCI support for eqosplus.
 LUCI_DEPENDS:=+bash +tc +kmod-sched-core +kmod-ifb +kmod-sched +iptables-mod-filter +iptables-mod-nat-extra +luci +luci-base +luci-compat
 LUCI_PKGARCH:=all
 
-PKG_MAINTAINER:=lava <byl0561@gmail.com>
+PKG_MAINTAINER:=lava <xingzj@163.com>
 
 define Build/Compile
 endef
